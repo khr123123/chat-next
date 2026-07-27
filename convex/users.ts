@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import { requireUser } from "./lib/auth";
 
 // 当前登录用户（你叫它 api.users.current / loggedInUser 都行，保持一致即可）
 export const me = query({
@@ -39,3 +40,23 @@ export const setAvatar = mutation({
         await ctx.db.patch(userId, { image: storageId });
     },
 });
+
+
+export const searchUsers = query({
+    args: { keyword: v.string() },
+    handler: async (ctx, { keyword }) => {
+        await requireUser(ctx)
+        if (!keyword.trim()) return []
+        // 简单前缀匹配，生产可上 search index
+        const byEmail = await ctx.db
+            .query("users")
+            .withIndex("email", (q) => q.eq("email", keyword))
+            .take(10)
+        const merged = new Map<string, any>()
+        for (const u of [...byEmail,]) merged.set(u._id, u)
+        return [...merged.values()].map((u) => ({
+            _id: u._id, name: u.name, email: u.email,
+            image: u.image, username: u.username,
+        }))
+    },
+})

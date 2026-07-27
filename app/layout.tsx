@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { Toaster } from "@/components/ui/sonner";
+import BaseLayout from "./BaseLayout";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
@@ -30,7 +31,9 @@ export default function RootLayout({
         <body>
           <ThemeProvider>
             <ConvexClientProvider>
-              {children}
+              <BaseLayout>
+                {children}
+              </BaseLayout>
               <Toaster />
             </ConvexClientProvider>
           </ThemeProvider>
