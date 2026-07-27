@@ -127,3 +127,24 @@
     @apply font-sans;
     }
 }
+
+
+/* 成功 */
+[data-sonner-toast][data-type="success"] svg {
+  color: #22c55e;
+}
+
+/* 错误 */
+[data-sonner-toast][data-type="error"] svg {
+  color: #ef4444;
+}
+
+/* 警告 */
+[data-sonner-toast][data-type="warning"] svg {
+  color: #f59e0b;
+}
+
+/* 信息 */
+[data-sonner-toast][data-type="info"] svg {
+  color: #3b82f6;
+}

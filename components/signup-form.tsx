@@ -53,7 +53,7 @@ export function SignupForm({
     try {
       await signIn("password", { email, password, flow: "signUp" })
       toast.success("账号创建成功")
-      router.replace("/chat")
+      router.replace("/")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "注册失败")
     } finally {
@@ -199,7 +199,7 @@ export function SignupForm({
 
           <div className="relative hidden bg-muted md:block">
             <img
-              src="/placeholder.svg"
+              src="https://ui.shadcn.com/placeholder.svg"
               alt="Image"
               className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
             />

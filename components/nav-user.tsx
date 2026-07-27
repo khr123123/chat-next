@@ -74,24 +74,23 @@ export function NavUser() {
 
   const me = useQuery(api.users.me) as
     | ({
-        _id: string
-        name?: string | null
-        email?: string | null
-        image?: string | null
-        avatarStorageId?: Id<"_storage"> | null
-      } | null)
+      _id: string
+      name?: string | null
+      email?: string | null
+      image?: Id<"_storage"> | null
+    } | null)
     | undefined
 
   const avatarUrl = useQuery(
     api.users.avatarUrl,
-    me?.avatarStorageId ? { storageId: me.avatarStorageId } : "skip",
+    me?.image ? { storageId: me.image } : "skip",
   ) as string | null | undefined
 
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const displayName = me?.name || me?.email?.split("@")[0] || "Guest"
   const email = me?.email || ""
-  const avatarSrc = avatarUrl ?? me?.image ?? undefined
+  const avatarSrc = avatarUrl
   const initials = getInitials(me?.name, me?.email)
 
   const handleLogout = useCallback(async () => {
@@ -133,10 +132,10 @@ export function NavUser() {
                 />
               }
             >
-             <Avatar className="h-8 w-8 rounded-lg">
-              <AvatarImage src={avatarSrc}/>
-              <AvatarFallback className="rounded-lg">CN</AvatarFallback>
-            </Avatar>
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarImage src={avatarSrc!} />
+                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+              </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{displayName}</span>
                 <span className="truncate text-xs">{email}</span>
@@ -155,7 +154,7 @@ export function NavUser() {
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     {/* 菜单顶部头像也支持 hover 修改 */}
                     <AvatarWithCamera
-                      src={avatarSrc}
+                      src={avatarSrc!}
                       alt={displayName}
                       fallback={initials}
                       onClick={() => setDialogOpen(true)}
@@ -187,7 +186,7 @@ export function NavUser() {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem onSelect={handleLogout}>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOutIcon />
                 Log out
               </DropdownMenuItem>
@@ -199,7 +198,7 @@ export function NavUser() {
       <AvatarUploadDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        currentSrc={avatarSrc}
+        currentSrc={avatarSrc!}
         fallback={initials}
       />
     </>

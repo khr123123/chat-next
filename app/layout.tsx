@@ -31,7 +31,7 @@ export default function RootLayout({
           <ThemeProvider>
             <ConvexClientProvider>
               {children}
-              <Toaster richColors position="top-center" closeButton />
+              <Toaster />
             </ConvexClientProvider>
           </ThemeProvider>
         </body>

@@ -1,3 +1,4 @@
+"use client"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   Breadcrumb,
@@ -7,14 +8,17 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { toast } from "sonner"
 
 export default function Page() {
+
   return (
     <SidebarProvider
       style={
@@ -50,6 +54,9 @@ export default function Page() {
               className="aspect-video h-12 w-full rounded-lg bg-muted/50"
             />
           ))}
+          <Button variant="outline" className="w-full" onClick={() => toast.error("This is an error toast")}>
+            Load more
+          </Button>
         </div>
       </SidebarInset>
     </SidebarProvider>

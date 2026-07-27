@@ -41,7 +41,7 @@ export function LoginForm({
     try {
       await signIn("password", { email, password, flow: "signIn" })
       toast.success("登录成功")
-      router.replace("/chat")
+      router.replace("/")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "邮箱或密码错误")
     } finally {
@@ -173,7 +173,7 @@ export function LoginForm({
 
           <div className="relative hidden bg-muted md:block">
             <img
-              src="/placeholder.svg"
+              src="https://ui.shadcn.com/placeholder.svg"
               alt="Image"
               className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
             />
