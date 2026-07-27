@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import { Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { Toaster } from "@/components/ui/sonner";
-import BaseLayout from "./BaseLayout";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
@@ -31,9 +30,7 @@ export default function RootLayout({
         <body>
           <ThemeProvider>
             <ConvexClientProvider>
-              <BaseLayout>
-                {children}
-              </BaseLayout>
+              {children}
               <Toaster />
             </ConvexClientProvider>
           </ThemeProvider>
