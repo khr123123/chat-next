@@ -17,7 +17,6 @@ import {
   ListIcon,
   SearchIcon,
   PlayIcon,
-  Loader2Icon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -38,6 +37,15 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Progress } from "@/components/ui/progress"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 type FileItem = {
   _id: Id<"files">
@@ -67,15 +75,36 @@ function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("zh-CN")
 }
 
-/**
- * 关键：给视频 URL 加上时间片段 #t=0.1
- * iOS Safari 只有拿到时间片段时，才会主动去请求并解码首帧作为 poster
- */
 function videoPosterUrl(url: string | null) {
   if (!url) return ""
-  // 已经带片段就不重复加
   if (url.includes("#t=")) return url
   return `${url}#t=0.1`
+}
+
+/**
+ * 生成页码显示数组，中间超出用 "ellipsis" 占位
+ * 例如：total=10, current=5 -> [1, 'ellipsis', 4, 5, 6, 'ellipsis', 10]
+ */
+function getPageItems(current: number, total: number): (number | "ellipsis")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
+
+  const items: (number | "ellipsis")[] = []
+  const showLeftEllipsis = current > 4
+  const showRightEllipsis = current < total - 3
+
+  items.push(1)
+  if (showLeftEllipsis) items.push("ellipsis")
+
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) items.push(i)
+
+  if (showRightEllipsis) items.push("ellipsis")
+  items.push(total)
+
+  return items
 }
 
 export default function Page() {
@@ -92,8 +121,7 @@ export default function Page() {
   const [uploadQueue, setUploadQueue] = React.useState<QueueItem[]>([])
 
   // 分页
-  const [visibleCount, setVisibleCount] = React.useState(PAGE_SIZE)
-  const sentinelRef = React.useRef<HTMLDivElement>(null)
+  const [currentPage, setCurrentPage] = React.useState(1)
   const scrollAreaRef = React.useRef<HTMLDivElement>(null)
 
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -110,41 +138,36 @@ export default function Page() {
     })
   }, [files, tab, search])
 
-  // 当前可见的分页切片
-  const visible = React.useMemo(
-    () => filtered.slice(0, visibleCount),
-    [filtered, visibleCount],
-  )
-  const hasMore = visible.length < filtered.length
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
 
-  // 切换 tab/搜索时，重置分页
+  // 当前页切片
+  const visible = React.useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, currentPage])
+
+  // 切换 tab/搜索时，重置到第 1 页
   React.useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
+    setCurrentPage(1)
   }, [tab, search])
 
-  // 无限滚动：IntersectionObserver 监听底部哨兵
+  // 如果当前页超出范围（如删除后），回退
   React.useEffect(() => {
-    if (!hasMore) return
-    const el = sentinelRef.current
-    if (!el) return
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((c) =>
-            Math.min(c + PAGE_SIZE, filtered.length),
-          )
-        }
-      },
-      {
-        // 提前 200px 触发加载，滚动体验更顺
-        rootMargin: "200px",
-      },
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [hasMore, filtered.length, visible.length])
+  // 翻页后滚动到顶部
+  const goToPage = (page: number) => {
+    const next = Math.min(Math.max(1, page), totalPages)
+    setCurrentPage(next)
+    // ScrollArea 内部的 viewport 滚动到顶部
+    const viewport = scrollAreaRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null
+    viewport?.scrollTo({ top: 0, behavior: "smooth" })
+  }
 
   const uploadOne = async (file: File, index: number) => {
     const postUrl = await generateUploadUrl()
@@ -266,6 +289,8 @@ export default function Page() {
     }
   }
 
+  const pageItems = getPageItems(currentPage, totalPages)
+
   return (
     <div
       className="flex h-full flex-col"
@@ -359,7 +384,7 @@ export default function Page() {
       </div>
 
       {/* 内容 */}
-     <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <Tabs
           value={tab}
           onValueChange={setTab}
@@ -442,22 +467,71 @@ export default function Page() {
                 </div>
               )}
 
-              {/* 分页哨兵 & 状态 */}
+              {/* 分页控件 */}
               {filtered.length > 0 && (
-                <div
-                  ref={sentinelRef}
-                  className="mt-6 flex items-center justify-center py-4"
-                >
-                  {hasMore ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2Icon className="size-4 animate-spin" />
-                      加载更多…
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      已显示全部 {filtered.length} 个文件
-                    </p>
-                  )}
+                <div className="mt-6 flex flex-col items-center gap-2 py-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (currentPage > 1) goToPage(currentPage - 1)
+                          }}
+                          aria-disabled={currentPage === 1}
+                          className={
+                            currentPage === 1
+                              ? "pointer-events-none opacity-50"
+                              : ""
+                          }
+                        />
+                      </PaginationItem>
+
+                      {pageItems.map((item, i) =>
+                        item === "ellipsis" ? (
+                          <PaginationItem key={`e-${i}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        ) : (
+                          <PaginationItem key={item}>
+                            <PaginationLink
+                              href="#"
+                              isActive={item === currentPage}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                goToPage(item)
+                              }}
+                            >
+                              {item}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ),
+                      )}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (currentPage < totalPages)
+                              goToPage(currentPage + 1)
+                          }}
+                          aria-disabled={currentPage === totalPages}
+                          className={
+                            currentPage === totalPages
+                              ? "pointer-events-none opacity-50"
+                              : ""
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+
+                  <p className="text-xs text-muted-foreground">
+                    第 {currentPage} / {totalPages} 页 · 共 {filtered.length}{" "}
+                    个文件
+                  </p>
                 </div>
               )}
             </div>
@@ -553,7 +627,6 @@ function FileCard({
       onClick={onPreview}
     >
       <div className="relative">
-        {/* 移动端：正方形；桌面端：4:3 */}
         <div className="relative aspect-square w-full bg-muted sm:aspect-[4/3]">
           {file.type === "image" && thumb && !imgError ? (
             <img
@@ -566,13 +639,11 @@ function FileCard({
             />
           ) : file.type === "video" && file.url ? (
             <video
-              // 关键修复：加 #t=0.1，让 iOS Safari 拉取首帧
               src={videoPosterUrl(file.url)}
               className="absolute inset-0 h-full w-full object-cover"
               muted
               playsInline
               preload="metadata"
-              // 移动端不要自动播放缩略
               disablePictureInPicture
               controlsList="nodownload"
             />
@@ -597,7 +668,6 @@ function FileCard({
           </>
         )}
 
-        {/* 移动端：操作按钮常显；桌面：hover 显示 */}
         <div
           className="absolute right-2 top-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
           onClick={(e) => e.stopPropagation()}
