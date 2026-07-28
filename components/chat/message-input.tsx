@@ -14,6 +14,10 @@ import {
   ImageIcon,
   PaperclipIcon,
   Loader2Icon,
+  SmileIcon,
+  PlusIcon,
+  TypeIcon,
+  MapPinIcon, // optional location-style icon if you need it
 } from "lucide-react"
 
 export function MessageInput({
@@ -29,18 +33,15 @@ export function MessageInput({
   const fileRef = React.useRef<HTMLInputElement>(null)
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
 
-  // 调用 api.conversations.sendMessage
   const sendMessage = useMutation(api.conversations.sendMessage)
-
-  // 调用 api.users.generateUploadUrl（上传文件用）
   const generateUploadUrl = useMutation(api.users.generateUploadUrl)
 
-  // 自适应高度
+  // auto-grow
   React.useEffect(() => {
     const el = textareaRef.current
     if (!el) return
     el.style.height = "auto"
-    el.style.height = Math.min(el.scrollHeight, 160) + "px"
+    el.style.height = Math.min(el.scrollHeight, 120) + "px"
   }, [text])
 
   const handleSendText = async () => {
@@ -54,7 +55,7 @@ export function MessageInput({
       })
       setText("")
     } catch (err: any) {
-      toast.error(err?.message ?? "发送失败")
+      toast.error(err?.message ?? "送信に失敗しました")
     }
   }
 
@@ -65,13 +66,6 @@ export function MessageInput({
     }
   }
 
-  /**
-   * 上传文件到 Convex Storage
-   * 1. 调用 generateUploadUrl 获取一次性上传地址
-   * 2. POST 文件到该地址
-   * 3. 拿到 storageId
-   * 4. 调用 sendMessage 发送附件消息
-   */
   const uploadAndSend = async (file: File, kind: "image" | "file") => {
     setUploading(true)
     try {
@@ -81,7 +75,7 @@ export function MessageInput({
         headers: { "Content-Type": file.type },
         body: file,
       })
-      if (!res.ok) throw new Error("上传失败")
+      if (!res.ok) throw new Error("アップロードに失敗しました")
       const { storageId } = await res.json()
 
       await sendMessage({
@@ -90,9 +84,9 @@ export function MessageInput({
         content: kind === "file" ? file.name : undefined,
         attachmentStorageId: storageId as Id<"_storage">,
       })
-      toast.success(kind === "image" ? "图片已发送" : "文件已发送")
+      toast.success(kind === "image" ? "画像を送信しました" : "ファイルを送信しました")
     } catch (err: any) {
-      toast.error(err?.message ?? "上传失败")
+      toast.error(err?.message ?? "アップロードに失敗しました")
     } finally {
       setUploading(false)
     }
@@ -111,70 +105,124 @@ export function MessageInput({
   }
 
   return (
-    <div className="border-t bg-background p-3">
-      <div className="flex items-end gap-2">
-        {/* 图片上传 */}
-        <input
-          ref={fileImageRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleImageChange}
-        />
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-9 shrink-0"
-          disabled={disabled || uploading}
-          onClick={() => fileImageRef.current?.click()}
-        >
-          <ImageIcon className="size-5 text-muted-foreground" />
-        </Button>
-
-        {/* 文件上传 */}
-        <input
-          ref={fileRef}
-          type="file"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-9 shrink-0"
-          disabled={disabled || uploading}
-          onClick={() => fileRef.current?.click()}
-        >
-          <PaperclipIcon className="size-5 text-muted-foreground" />
-        </Button>
-
-        {/* 文本输入 */}
+    <div className="border-t bg-background px-4 py-3">
+      {/* Teams-style single bar */}
+      <div
+        className={cn(
+          "flex items-end gap-1 rounded-lg border border-input bg-background",
+          "px-3 py-2 shadow-sm",
+          "focus-within:ring-1 focus-within:ring-ring"
+        )}
+      >
+        {/* Text area – fills remaining space */}
         <Textarea
           ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="输入消息…  Enter 发送，Shift+Enter 换行"
+          placeholder="メッセージを入力"
           rows={1}
           disabled={disabled || uploading}
           className={cn(
-            "min-h-[40px] max-h-[160px] resize-none flex-1",
+            "min-h-[36px] max-h-[120px] flex-1 resize-none",
+            "border-0 bg-transparent p-0 shadow-none",
+            "focus-visible:ring-0 text-[15px] leading-relaxed",
+            "placeholder:text-muted-foreground"
           )}
         />
 
-        {/* 发送按钮 */}
-        <Button
-          size="icon"
-          className="size-9 shrink-0"
-          disabled={disabled || uploading || !text.trim()}
-          onClick={handleSendText}
-        >
-          {uploading ? (
-            <Loader2Icon className="size-4 animate-spin" />
-          ) : (
-            <SendIcon className="size-4" />
-          )}
-        </Button>
+        {/* Right-side icon cluster (matches screenshot order) */}
+        <div className="flex items-center gap-0.5 shrink-0 self-end pb-0.5">
+          {/* Formatting “A” */}
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            disabled={disabled || uploading}
+            title="書式"
+          >
+            <TypeIcon className="size-[18px]" />
+          </Button>
+
+          {/* Emoji */}
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            disabled={disabled || uploading}
+            title="絵文字"
+          >
+            <SmileIcon className="size-[18px]" />
+          </Button>
+
+          {/* Attach / file */}
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            disabled={disabled || uploading}
+            onClick={() => fileRef.current?.click()}
+            title="ファイルを添付"
+          >
+            <PaperclipIcon className="size-[18px]" />
+          </Button>
+
+          {/* Image (or location-style icon if you prefer MapPinIcon) */}
+          <input
+            ref={fileImageRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageChange}
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            disabled={disabled || uploading}
+            onClick={() => fileImageRef.current?.click()}
+            title="画像"
+          >
+            <ImageIcon className="size-[18px]" />
+          </Button>
+
+          {/* Plus */}
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            disabled={disabled || uploading}
+            title="その他"
+          >
+            <PlusIcon className="size-[18px]" />
+          </Button>
+
+          {/* Send */}
+          <Button
+            type="button"
+            size="icon"
+            className="size-8 ml-0.5"
+            disabled={disabled || uploading || !text.trim()}
+            onClick={handleSendText}
+          >
+            {uploading ? (
+              <Loader2Icon className="size-4 animate-spin" />
+            ) : (
+              <SendIcon className="size-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   )

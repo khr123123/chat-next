@@ -4,7 +4,6 @@ import * as React from "react"
 import { useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Id } from "@/convex/_generated/dataModel"
-
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   DropdownMenu,
@@ -360,7 +359,6 @@ export function MessageArea({
           membersMap={membersMap}
         />
       </div>
-
       {/* 输入框 */}
       <div className="shrink-0">
         <MessageInput conversationId={conversationId} />

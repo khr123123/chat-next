@@ -138,7 +138,7 @@ const schema = defineSchema({
       "messages_by_conversation",
       ["conversationId"],
     )
-,
+  ,
   messageReads: defineTable({
     messageId: v.id("messages"),
     userId: v.id("users"),
@@ -152,6 +152,16 @@ const schema = defineSchema({
       "message_reads_by_user_message",
       ["userId", "messageId"],
     ),
+  // convex/schema.ts
+  files: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    type: v.union(v.literal("image"), v.literal("video"), v.literal("file")),
+    size: v.number(),
+    storageId: v.id("_storage"),
+    // 可选：视频封面
+    thumbnailStorageId: v.optional(v.id("_storage")),
+  }).index("by_user", ["userId"]),
 });
 
 export default schema;
