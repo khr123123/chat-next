@@ -16,6 +16,8 @@ import {
   Grid3X3Icon,
   ListIcon,
   SearchIcon,
+  PlayIcon,
+  Loader2Icon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -33,16 +35,6 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Progress } from "@/components/ui/progress"
@@ -63,6 +55,8 @@ type QueueItem = {
   status: "pending" | "uploading" | "done" | "error"
 }
 
+const PAGE_SIZE = 24 // 每页 24 个（3/4/6 列都能整除）
+
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -71,6 +65,17 @@ function formatSize(bytes: number) {
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString("zh-CN")
+}
+
+/**
+ * 关键：给视频 URL 加上时间片段 #t=0.1
+ * iOS Safari 只有拿到时间片段时，才会主动去请求并解码首帧作为 poster
+ */
+function videoPosterUrl(url: string | null) {
+  if (!url) return ""
+  // 已经带片段就不重复加
+  if (url.includes("#t=")) return url
+  return `${url}#t=0.1`
 }
 
 export default function Page() {
@@ -85,19 +90,61 @@ export default function Page() {
   const [preview, setPreview] = React.useState<FileItem | null>(null)
   const [uploading, setUploading] = React.useState(false)
   const [uploadQueue, setUploadQueue] = React.useState<QueueItem[]>([])
+
+  // 分页
+  const [visibleCount, setVisibleCount] = React.useState(PAGE_SIZE)
+  const sentinelRef = React.useRef<HTMLDivElement>(null)
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null)
+
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
+  // 过滤后的完整列表
   const filtered = React.useMemo(() => {
     if (!files) return []
+    const kw = search.trim().toLowerCase()
     return files.filter((f) => {
       if (tab === "image" && f.type !== "image") return false
       if (tab === "video" && f.type !== "video") return false
-      if (search && !f.name.toLowerCase().includes(search.toLowerCase())) {
-        return false
-      }
+      if (kw && !f.name.toLowerCase().includes(kw)) return false
       return true
     })
   }, [files, tab, search])
+
+  // 当前可见的分页切片
+  const visible = React.useMemo(
+    () => filtered.slice(0, visibleCount),
+    [filtered, visibleCount],
+  )
+  const hasMore = visible.length < filtered.length
+
+  // 切换 tab/搜索时，重置分页
+  React.useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [tab, search])
+
+  // 无限滚动：IntersectionObserver 监听底部哨兵
+  React.useEffect(() => {
+    if (!hasMore) return
+    const el = sentinelRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((c) =>
+            Math.min(c + PAGE_SIZE, filtered.length),
+          )
+        }
+      },
+      {
+        // 提前 200px 触发加载，滚动体验更顺
+        rootMargin: "200px",
+      },
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, filtered.length, visible.length])
 
   const uploadOne = async (file: File, index: number) => {
     const postUrl = await generateUploadUrl()
@@ -210,16 +257,10 @@ export default function Page() {
   }
 
   const handleDelete = async (file: FileItem) => {
-    console.log("开始删除", file._id)
-
     try {
       await removeFile({ id: file._id })
-
       toast.success("已删除")
-
-      if (preview?._id === file._id) {
-        setPreview(null)
-      }
+      if (preview?._id === file._id) setPreview(null)
     } catch (err: any) {
       toast.error(err?.message ?? "删除失败")
     }
@@ -237,8 +278,8 @@ export default function Page() {
       }}
     >
       {/* 顶部 */}
-      <div className="border-b px-6 py-4">
-        <div className="flex items-center justify-between gap-4">
+      <div className="border-b px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-lg font-semibold">文件</h1>
             <p className="text-sm text-muted-foreground">
@@ -246,14 +287,14 @@ export default function Page() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative hidden sm:block">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 sm:flex-none">
               <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
                 placeholder="搜索文件…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-56 pl-8"
+                className="w-full pl-8 sm:w-56"
               />
             </div>
 
@@ -298,7 +339,7 @@ export default function Page() {
           <div className="mt-3 space-y-2">
             {uploadQueue.map((item, i) => (
               <div key={i} className="flex items-center gap-3 text-sm">
-                <span className="w-40 truncate text-muted-foreground">
+                <span className="w-32 truncate text-muted-foreground sm:w-40">
                   {item.name}
                 </span>
                 <div className="flex-1">
@@ -324,7 +365,7 @@ export default function Page() {
           onValueChange={setTab}
           className="flex h-full flex-col"
         >
-          <div className="border-b px-6">
+          <div className="border-b px-4 sm:px-6">
             <TabsList className="h-10 bg-transparent p-0">
               <TabsTrigger
                 value="all"
@@ -349,14 +390,14 @@ export default function Page() {
             </TabsList>
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="p-6">
+          <ScrollArea className="flex-1" ref={scrollAreaRef}>
+            <div className="p-4 sm:p-6">
               {files === undefined ? (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <div
                       key={i}
-                      className="aspect-[4/3] animate-pulse rounded-lg bg-muted"
+                      className="aspect-square animate-pulse rounded-lg bg-muted sm:aspect-[4/3]"
                     />
                   ))}
                 </div>
@@ -378,8 +419,8 @@ export default function Page() {
                   </Button>
                 </div>
               ) : view === "grid" ? (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                  {filtered.map((file) => (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  {visible.map((file) => (
                     <FileCard
                       key={file._id}
                       file={file}
@@ -390,7 +431,7 @@ export default function Page() {
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {filtered.map((file) => (
+                  {visible.map((file) => (
                     <FileRow
                       key={file._id}
                       file={file}
@@ -398,6 +439,25 @@ export default function Page() {
                       onDelete={() => handleDelete(file)}
                     />
                   ))}
+                </div>
+              )}
+
+              {/* 分页哨兵 & 状态 */}
+              {filtered.length > 0 && (
+                <div
+                  ref={sentinelRef}
+                  className="mt-6 flex items-center justify-center py-4"
+                >
+                  {hasMore ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2Icon className="size-4 animate-spin" />
+                      加载更多…
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      已显示全部 {filtered.length} 个文件
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -438,6 +498,7 @@ export default function Page() {
                   download={preview.name}
                   target="_blank"
                   rel="noreferrer"
+                  className="inline-flex items-center text-sm text-primary hover:underline"
                 >
                   <DownloadIcon className="mr-2 size-4" />
                   下载
@@ -447,8 +508,8 @@ export default function Page() {
           )}
 
           <div className="flex items-center justify-between border-t px-4 py-3">
-            <div>
-              <p className="text-sm font-medium">{preview?.name}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{preview?.name}</p>
               <p className="text-xs text-muted-foreground">
                 {preview && formatSize(preview.size)} ·{" "}
                 {preview && formatDate(preview._creationTime)}
@@ -460,8 +521,9 @@ export default function Page() {
                 download={preview.name}
                 target="_blank"
                 rel="noreferrer"
+                className="inline-flex items-center text-sm text-primary hover:underline"
               >
-                <DownloadIcon className="mr-2 size-4" />
+                <DownloadIcon className="mr-1 size-4" />
                 下载
               </a>
             )}
@@ -483,6 +545,7 @@ function FileCard({
   onDelete: () => void
 }) {
   const thumb = file.thumbnailUrl || file.url
+  const [imgError, setImgError] = React.useState(false)
 
   return (
     <Card
@@ -490,21 +553,28 @@ function FileCard({
       onClick={onPreview}
     >
       <div className="relative">
-        <div className="relative aspect-[4/3] w-full bg-muted">
-          {file.type === "image" && thumb ? (
+        {/* 移动端：正方形；桌面端：4:3 */}
+        <div className="relative aspect-square w-full bg-muted sm:aspect-[4/3]">
+          {file.type === "image" && thumb && !imgError ? (
             <img
               src={thumb}
               alt={file.name}
               className="absolute inset-0 h-full w-full object-cover"
               loading="lazy"
+              decoding="async"
+              onError={() => setImgError(true)}
             />
           ) : file.type === "video" && file.url ? (
             <video
-              src={file.url}
+              // 关键修复：加 #t=0.1，让 iOS Safari 拉取首帧
+              src={videoPosterUrl(file.url)}
               className="absolute inset-0 h-full w-full object-cover"
               muted
               playsInline
               preload="metadata"
+              // 移动端不要自动播放缩略
+              disablePictureInPicture
+              controlsList="nodownload"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -520,24 +590,25 @@ function FileCard({
               视频
             </Badge>
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="rounded-full bg-black/50 p-2">
-                <VideoIcon className="size-6 text-white" />
+              <div className="rounded-full bg-black/50 p-2 backdrop-blur-sm">
+                <PlayIcon className="size-5 fill-white text-white sm:size-6" />
               </div>
             </div>
           </>
         )}
 
+        {/* 移动端：操作按钮常显；桌面：hover 显示 */}
         <div
-          className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
+          className="absolute right-2 top-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
           onClick={(e) => e.stopPropagation()}
         >
           <FileActions file={file} onDelete={onDelete} />
         </div>
       </div>
 
-      <CardContent className="p-3">
-        <p className="truncate text-sm font-medium">{file.name}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
+      <CardContent className="p-2 sm:p-3">
+        <p className="truncate text-xs font-medium sm:text-sm">{file.name}</p>
+        <p className="mt-0.5 text-[10px] text-muted-foreground sm:text-xs">
           {formatSize(file.size)} · {formatDate(file._creationTime)}
         </p>
       </CardContent>
@@ -555,16 +626,32 @@ function FileRow({
   onPreview: () => void
   onDelete: () => void
 }) {
+  const thumb = file.thumbnailUrl || file.url
+
   return (
     <div
       className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/50"
       onClick={onPreview}
     >
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-        {file.type === "image" ? (
-          <ImageIcon className="size-5 text-muted-foreground" />
-        ) : file.type === "video" ? (
-          <VideoIcon className="size-5 text-muted-foreground" />
+      <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+        {file.type === "image" && thumb ? (
+          <img
+            src={thumb}
+            alt={file.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : file.type === "video" && file.url ? (
+          <>
+            <video
+              src={videoPosterUrl(file.url)}
+              className="h-full w-full object-cover"
+              muted
+              playsInline
+              preload="metadata"
+            />
+            <PlayIcon className="absolute size-4 fill-white text-white drop-shadow" />
+          </>
         ) : (
           <FileIcon className="size-5 text-muted-foreground" />
         )}
@@ -592,10 +679,13 @@ function FileActions({
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80">
+      <DropdownMenuTrigger
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex size-8 items-center justify-center rounded-md bg-secondary/90 text-secondary-foreground backdrop-blur-sm hover:bg-secondary"
+      >
         <MoreHorizontalIcon className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem
           onClick={() => {
             if (file.url) window.open(file.url, "_blank")
@@ -606,9 +696,7 @@ function FileActions({
         </DropdownMenuItem>
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
-          onClick={() => {
-            onDelete()
-          }}
+          onClick={onDelete}
         >
           <Trash2Icon className="mr-2 size-4" />
           删除

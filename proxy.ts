@@ -4,24 +4,43 @@ import {
   nextjsMiddlewareRedirect,
 } from "@convex-dev/auth/nextjs/server"
 
-const isPublic = createRouteMatcher(["/login", "/signup", "/api/(.*)"])
-const isProtected = createRouteMatcher(["/chat(.*)", "/settings(.*)", "/"])
+
+const isProtected = createRouteMatcher([
+  "/chat(.*)",
+  "/settings(.*)",
+  "/files(.*)",
+  "/",
+])
+
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const authed = await convexAuth.isAuthenticated()
+  const pathname = request.nextUrl.pathname
 
-  if (isProtected(request) && !authed) {
-    return nextjsMiddlewareRedirect(request, "/login")
-  }
-  if ((request.nextUrl.pathname === "/login" ||
-    request.nextUrl.pathname === "/signup") && authed) {
+
+  // 已登录用户访问登录/注册页 -> 首页
+  if (
+    (pathname === "/login" || pathname === "/signup") &&
+    authed
+  ) {
     return nextjsMiddlewareRedirect(request, "/")
+  }
+
+
+  // 未登录访问受保护页面 -> 登录
+  if (
+    isProtected(request) &&
+    !authed
+  ) {
+    return nextjsMiddlewareRedirect(request, "/login")
   }
 })
 
 
 export const config = {
-  // The following matcher runs middleware on all routes
-  // except static assets.
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
-};
+  matcher: [
+    "/((?!.*\\..*|_next).*)",
+    "/",
+    "/(api|trpc)(.*)",
+  ],
+}
