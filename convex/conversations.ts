@@ -16,7 +16,7 @@ export const openDirect = mutation({
 
     const key = dmKey(userId, peerId)
     const existed = await ctx.db.query("conversations")
-      .withIndex("by_dm_key", (q) => q.eq("dmKey", key)).unique()
+      .withIndex("conversations_by_dm_key", (q) => q.eq("dmKey", key)).unique()
     if (existed) return existed._id
 
     const cid = await ctx.db.insert("conversations", {
@@ -108,7 +108,7 @@ export const listMessages = query({
     const { userId } = await requireUser(ctx)
     await requireMember(ctx, userId, conversationId)
     const q = ctx.db.query("messages")
-      .withIndex("by_conversation", (x) => x.eq("conversationId", conversationId))
+      .withIndex("messages_by_conversation", (x) => x.eq("conversationId", conversationId))
       .order("desc")
     const rows = await q.take(Math.min(limit ?? 30, 100))
     return rows.reverse()
@@ -124,7 +124,7 @@ export const listMyConversations = query({
 
     const memberships = await ctx.db
       .query("conversationMembers")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("conversation_members_by_user", (q) => q.eq("userId", userId))
       .collect()
 
     const items = await Promise.all(
@@ -139,8 +139,8 @@ export const listMyConversations = query({
         if (conv.type === "direct") {
           const other = await ctx.db
             .query("conversationMembers")
-            .withIndex("by_conversation", (q) =>
-              q.eq("conversationId", conv._id),
+            .withIndex("conversation_members_by_user_conversation", (q) =>
+              q.eq("userId", userId).eq("conversationId", conv._id)
             )
             .collect()
           const peerMem = other.find((x) => x.userId !== userId)
@@ -197,7 +197,7 @@ export const getConversation = query({
 
     const members = await ctx.db
       .query("conversationMembers")
-      .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
+      .withIndex("conversation_members_by_conversation", (q) => q.eq("conversationId", conversationId))
       .collect()
 
     const withUser = await Promise.all(

@@ -32,7 +32,7 @@ export async function requireFriend(
 ) {
   const rel = await ctx.db
     .query("friendships")
-    .withIndex("by_pair", (q) => q.eq("userId", userId).eq("friendId", otherId))
+    .withIndex("friendships_by_pair", (q) => q.eq("userId", userId).eq("friendId", otherId))
     .unique()
   if (!rel) throw new ConvexError({ code: "NOT_FRIEND", message: "对方不是你的好友" })
   return rel
@@ -46,7 +46,7 @@ export async function requireMember(
 ) {
   const membership = await ctx.db
     .query("conversationMembers")
-    .withIndex("by_user_conversation", (q) =>
+    .withIndex("conversation_members_by_user_conversation", (q) =>
       q.eq("userId", userId).eq("conversationId", conversationId),
     )
     .unique()
