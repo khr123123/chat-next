@@ -136,14 +136,16 @@ export const listMyConversations = query({
         let peer: any = null
         let avatarUrl: string | null = null
 
+        // convex/conversations.ts — listMyConversations 里 direct 分支
         if (conv.type === "direct") {
-          const other = await ctx.db
+          const allMembers = await ctx.db
             .query("conversationMembers")
-            .withIndex("conversation_members_by_user_conversation", (q) =>
-              q.eq("userId", userId).eq("conversationId", conv._id)
+            .withIndex("conversation_members_by_conversation", (q) =>
+              q.eq("conversationId", conv._id),
             )
             .collect()
-          const peerMem = other.find((x) => x.userId !== userId)
+
+          const peerMem = allMembers.find((x) => x.userId !== userId)
           if (peerMem) {
             peer = await ctx.db.get(peerMem.userId)
             title = peer?.name ?? peer?.email ?? "未命名"

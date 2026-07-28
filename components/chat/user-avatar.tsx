@@ -15,17 +15,16 @@ export function useStorageUrl(storageId?: Id<"_storage">) {
 }
 
 export function UserAvatar({
-  storageId,
+  url,
   name,
   email,
   className,
 }: {
-  storageId?: Id<"_storage">
+  url?: string
   name?: string
   email?: string
   className?: string
 }) {
-  const url = useStorageUrl(storageId)
   const fallback = (name ?? email ?? "?").charAt(0).toUpperCase()
 
   return (

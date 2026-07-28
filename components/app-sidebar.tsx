@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { UserAvatar } from "@/components/chat/user-avatar"
 import { NewChatDialog } from "@/components/chat/new-chat-dialog"
 import { ProfileDialog } from "@/components/chat/profile-dialog"
 import {
@@ -30,6 +29,8 @@ import {
   PlusIcon,
   SearchIcon,
 } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { cn } from "@/lib/utils"
 
 const navItems = [
   { title: "聊天", href: "/", icon: MessageCircleIcon },
@@ -41,6 +42,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { setOpen } = useSidebar()
+  const me = useQuery(api.users.me, {})
 
   // 当前选中的会话
   const activeConversationId = searchParams.get("c")
@@ -58,7 +60,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       c.title?.toLowerCase().includes(search.toLowerCase()),
     )
   }, [conversations, search])
-
   return (
     <Sidebar
       collapsible="icon"
@@ -163,48 +164,49 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span>暂无会话，点击 + 开始聊天</span>
                 </div>
               ) : (
-                filtered.map((conv: any) => (
-                  <Link
-                    key={conv._id}
-                    href={`/?c=${conv._id}`}
-                    onClick={() => setOpen(true)}
-                    className={`flex cursor-pointer items-start gap-3 border-b p-3 text-sm leading-tight last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
-                      activeConversationId === conv._id
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : ""
-                    }`}
-                  >
-                    <UserAvatar
-                      storageId={
-                        conv.type === "direct"
-                          ? conv.peer?.image
-                          : undefined
-                      }
-                      name={conv.title}
-                      className="size-10 shrink-0"
-                    />
-                    <div className="flex-1 overflow-hidden">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="truncate font-medium">
-                          {conv.title || "未命名"}
-                        </span>
-                        {conv.unreadCount > 0 && (
-                          <Badge
-                            variant="destructive"
-                            className="h-5 shrink-0 px-1.5 text-xs"
-                          >
-                            {conv.unreadCount > 99
-                              ? "99+"
-                              : conv.unreadCount}
-                          </Badge>
-                        )}
+                filtered.map((conv: any) => {
+                  const avatarUrl = conv.avatarUrl as string | undefined
+                  const title = (conv.title as string) || "未命名"
+                  const initials = title.slice(0, 1).toUpperCase()
+
+                  return (
+                    <Link
+                      key={conv._id}
+                      href={`/?c=${conv._id}`}
+                      onClick={() => setOpen(true)}
+                      className={cn(
+                        "flex cursor-pointer items-start gap-3 border-b p-3 text-sm leading-tight last:border-b-0",
+                        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        activeConversationId === conv._id &&
+                        "bg-sidebar-accent text-sidebar-accent-foreground",
+                      )}
+                    >
+                      <Avatar className="size-10">
+                        <AvatarImage src={avatarUrl} alt={title} />
+                        <AvatarFallback className="bg-muted text-sm font-medium">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="flex-1 overflow-hidden">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate font-medium">{title}</span>
+                          {conv.unreadCount > 0 && (
+                            <Badge
+                              variant="destructive"
+                              className="h-5 shrink-0 px-1.5 text-xs"
+                            >
+                              {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                          {conv.lastMessagePreview || "暂无消息"}
+                        </p>
                       </div>
-                      <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                        {conv.lastMessagePreview || "暂无消息"}
-                      </p>
-                    </div>
-                  </Link>
-                ))
+                    </Link>
+                  )
+                })
               )}
             </SidebarGroupContent>
           </SidebarGroup>
