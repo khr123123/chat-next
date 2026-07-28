@@ -270,7 +270,9 @@ export function MessageArea({
 }) {
   const conv = useQuery(api.conversations.getConversation, { conversationId })
   const me = useQuery(api.users.me, {})
-
+  if (!me) {
+    return null
+  }
   if (conv === undefined || me === undefined) {
     return (
       <div className="flex h-full items-center justify-center p-4">
