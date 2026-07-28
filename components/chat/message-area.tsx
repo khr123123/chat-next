@@ -255,7 +255,7 @@ export function MessageArea({
           storageId={
             conv.type === "direct"
               ? conv.members?.find((m: any) => m.userId !== me?._id)?.user
-                  ?.image
+                ?.image
               : conv.avatarStorageId
           }
           name={conv.title}
@@ -269,7 +269,7 @@ export function MessageArea({
             {isGroup
               ? `${conv.memberCount} 人`
               : conv.members?.find((m: any) => m.userId !== me?._id)?.user
-                  ?.email ?? ""}
+                ?.email ?? ""}
           </p>
         </div>
 
