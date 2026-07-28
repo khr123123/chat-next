@@ -1,7 +1,6 @@
 import { Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { ConvexClientProvider } from "./ConvexClientProvider";
@@ -28,12 +27,10 @@ export default function RootLayout({
         className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
       >
         <body>
-          <ThemeProvider>
             <ConvexClientProvider>
               {children}
               <Toaster />
             </ConvexClientProvider>
-          </ThemeProvider>
         </body>
       </html>
     </ConvexAuthNextjsServerProvider>

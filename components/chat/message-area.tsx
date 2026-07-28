@@ -30,7 +30,6 @@ import {
   AttachmentAction,
   AttachmentTrigger,
 } from "@/components/ui/attachment"
-import { useStorageUrl } from "@/components/chat/user-avatar"
 import { MessageInput } from "@/components/chat/message-input"
 import { cn } from "@/lib/utils"
 import {
@@ -86,7 +85,7 @@ function MessageBubble({
   senderAvatarUrl?: string | null
   isGroup: boolean
 }) {
-  const attachmentUrl = useStorageUrl(message.attachmentStorageId)
+  const attachmentUrl = undefined // TODO: message.kind === "image" || "file" 时，获取附件 URL
   const align = isMine ? "end" : "start"
   const bubbleVariant = isMine ? "default" : "secondary"
   const avatarSrc = senderAvatarUrl || undefined

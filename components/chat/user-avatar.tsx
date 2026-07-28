@@ -1,5 +1,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { api } from "@/convex/_generated/api"
+import { useQuery } from "convex/react"
 type UserAvatarProps = {
   url?: string
   storageId?: string | null
