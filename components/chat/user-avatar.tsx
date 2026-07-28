@@ -1,37 +1,26 @@
-"use client"
-
-import { useQuery } from "convex/react"
-import { api } from "@/convex/_generated/api"
-import { Id } from "@/convex/_generated/dataModel"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
-
-/**
- * 把任意 _storage id 解析成可访问的 url
- * 复用 api.users.avatarUrl（它本质就是 ctx.storage.getUrl）
- */
-export function useStorageUrl(storageId?: Id<"_storage">) {
-  return useQuery(api.users.avatarUrl, storageId ? { storageId } : "skip")
+type UserAvatarProps = {
+  url?: string
+  storageId?: string
+  name?: string
+  email?: string
+  className?: string
 }
 
 export function UserAvatar({
   url,
+  storageId,
   name,
   email,
   className,
-}: {
-  url?: string
-  name?: string
-  email?: string
-  className?: string
-}) {
-  const fallback = (name ?? email ?? "?").charAt(0).toUpperCase()
+}: UserAvatarProps) {
+
+  const avatarUrl = url ?? storageId
 
   return (
-    <Avatar className={cn("size-10", className)}>
-      <AvatarImage src={url ?? undefined} alt={name ?? ""} />
-      <AvatarFallback className="bg-muted text-sm font-medium">
-        {fallback}
+    <Avatar className={className}>
+      <AvatarImage src={avatarUrl} />
+      <AvatarFallback>
+        {name?.charAt(0) ?? email?.charAt(0) ?? "U"}
       </AvatarFallback>
     </Avatar>
   )
