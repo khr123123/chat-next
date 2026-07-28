@@ -12,6 +12,7 @@ const isProtected = createRouteMatcher([
   "/",
 ])
 
+
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const authed = await convexAuth.isAuthenticated()
   const pathname = request.nextUrl.pathname

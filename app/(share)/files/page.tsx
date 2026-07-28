@@ -359,7 +359,7 @@ export default function Page() {
       </div>
 
       {/* 内容 */}
-      <div className="flex-1 overflow-hidden">
+     <div className="min-h-0 flex-1 overflow-hidden">
         <Tabs
           value={tab}
           onValueChange={setTab}
@@ -390,7 +390,7 @@ export default function Page() {
             </TabsList>
           </div>
 
-          <ScrollArea className="flex-1" ref={scrollAreaRef}>
+          <ScrollArea className="min-h-0 flex-1" ref={scrollAreaRef}>
             <div className="p-4 sm:p-6">
               {files === undefined ? (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
