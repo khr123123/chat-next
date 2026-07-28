@@ -1,13 +1,9 @@
-// app/(chat)/layout.tsx
-"use client"
-import { AppSidebar } from "@/components/app-sidebar"
-import { Separator } from "@/components/ui/separator"
-import {
-  SidebarInset, SidebarProvider, SidebarTrigger,
-} from "@/components/ui/sidebar"
+import { CardSplitAccordian } from "@/components/ui/card-split-accordian";
 
-export default function Page({ children }: { children: React.ReactNode }) {
+export default function Page() {
   return (
-    <>s</>
-  )
+    <div className="p-8">
+      <CardSplitAccordian />
+    </div>
+  );
 }
